@@ -1,5 +1,5 @@
 
-# TP3 SIA
+# TP3 SIA - Perceptrón Simple y Multicapa
 
 ### Requisitos
 
