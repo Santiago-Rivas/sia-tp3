@@ -8,9 +8,9 @@ class LinearPerceptron(Perceptron):
         """Identity function"""
         return value
 
-    def compute_deltas(self) -> np.array:
-        output_errors = self.expected_value - self.get_outputs()
-        deltas = self.learning_rate * output_errors.reshape(-1, 1) * self.data
+    def compute_deltas(self, indexes: [int]) -> np.array:
+        output_errors = self.expected_value[indexes] - self.get_range_outputs(indexes)
+        deltas = self.learning_rate * output_errors.reshape(-1, 1) * self.data[indexes]
 
         return deltas
 
@@ -23,5 +23,5 @@ class LinearPerceptron(Perceptron):
     def is_converged(self):
         expected_value_amplitude = np.max(
             self.expected_value) - np.min(self.expected_value)
-        percentage_threshold = 10/100  # VARIABLE
+        percentage_threshold = 0.00001
         return self.compute_error() < percentage_threshold * expected_value_amplitude

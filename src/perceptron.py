@@ -2,7 +2,9 @@ import sys
 import csv
 from typing import Optional
 import numpy as np
+import random
 
+import time
 
 x_tuple = (float, float, float)
 float_array = [float, float, float]
@@ -13,12 +15,13 @@ class Perceptron:
         self,
         data: np.array,
         expected_value: np.array,
-        learning_rate: float = 0.01
+        learning_rate: float = 0.000001
     ):
         self.learning_rate = learning_rate
         self.min_error = sys.maxsize
         self.data = np.insert(data, 0, 1, axis=1)
-        self.weights = np.zeros(self.data.shape[1])
+        self.weights = np.random.uniform(low=-1, high=1, size=self.data.shape[1])
+        self.min_weights = self.weights
         self.expected_value = expected_value
 
     def projection(self, x: x_tuple) -> float:
@@ -36,15 +39,22 @@ class Perceptron:
 
     def train(self, epochs: Optional[int] = 1000):
         for epoch in range(epochs):
-            self.update_weights()
+            indexes = self.get_indexes()
+            self.update_weights(indexes)
+
+            error = self.compute_error()
+            if error < self.min_error:
+                self.max_error = error
+                self.min_weights = self.weights
 
             # Me fijo si el error esta dentro de los margenes que busco
             if self.is_converged():
                 break
+        self.weights = self.min_weights
         return epoch+1, self.is_converged()
 
-    def update_weights(self):
-        deltas = self.compute_deltas()
+    def update_weights(self, indexes):
+        deltas = self.compute_deltas(indexes)
         self.weights = self.weights + np.sum(deltas, axis=0)
 
     def __str__(self) -> str:
@@ -61,13 +71,22 @@ class Perceptron:
         excitations = np.dot(self.data, self.weights)
         return np.vectorize(self.activation_func)(excitations)
 
+    def get_range_outputs(self, indexes: [int]):
+        excitations = np.dot(self.data[indexes], self.weights)
+        return np.vectorize(self.activation_func)(excitations)
+
+    def get_indexes(self):
+        # u = random.randint(0, len(self.data) - 1)
+        u = np.random.randint(0, len(self.data) - 1, 1)
+        return u
+
     def compute_error(self):
         raise NotImplementedError
 
     def is_converged(self):
         raise NotImplementedError
 
-    def compute_deltas(self):
+    def compute_deltas(self, indexes):
         raise NotImplementedError
 
     def activation_func(self, value):

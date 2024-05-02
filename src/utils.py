@@ -13,8 +13,11 @@ def logical_and(x: list[int, int]):
 def logical_xor(x: list[int, int]):
     return 1 if get_boolean_value(x[0]) ^ get_boolean_value(x[1]) else -1
 
+
 def feature_scaling(
-    value: float, from_int: tuple[float, float], to_int: tuple[float, float]
+    value: float,
+    from_int: tuple[float, float],
+    to_int: tuple[float, float]
 ) -> float:
     numerator = value - from_int[0]
     denominator = from_int[1] - from_int[0]
