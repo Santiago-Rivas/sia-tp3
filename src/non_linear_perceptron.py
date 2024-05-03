@@ -2,8 +2,8 @@ import numpy as np
 from src.perceptron import Perceptron
 from src.utils import feature_scaling
 from typing import Callable
-import time
 import src.functions as fun
+import time
 
 
 class NonLinearPerceptron(Perceptron):
@@ -64,7 +64,7 @@ class NonLinearPerceptron(Perceptron):
         expected_values_amplitude = np.max(
             self.scaled_expected_values) - np.min(self.scaled_expected_values)
         percentage_threshold = 0.0005
-        return self.compute_error() < percentage_threshold
+        return self.compute_error() < percentage_threshold * expected_values_amplitude
 
     def __str__(self) -> str:
         output = "Expected - Actual\n"

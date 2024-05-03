@@ -1,12 +1,8 @@
 import numpy as np
 from src.perceptron import Perceptron
 from src.utils import feature_scaling
-
-
-def feature_scaling(value: float, from_int: tuple[float, float], to_int: tuple[float, float]) -> float:
-    numerator = value - from_int[0]
-    denominator = from_int[1] - from_int[0]
-    return (numerator / denominator) * (to_int[1] - to_int[0]) + to_int[0]
+from typing import Callable
+import src.functions as fun
 
 
 class MultiLayerPerceptron(Perceptron):
@@ -15,54 +11,70 @@ class MultiLayerPerceptron(Perceptron):
             self,
             inputs: np.array,
             expected_outputs: np.array,
-            hidden_nodes: int,
-            output_nodes: int,
-            learning_rate: float = 0.01
+            hidden_nodes_dimensions: [int],
+            output_nodes_dimension: int,
+            beta: float = 0.9,
+            learning_rate: float = 0.01,
+            sigmoid_func: Callable[[float, ...], float] = fun.sigmoid_exp,
+            sigmoid_func_img: tuple[float, float] = (0, 1),
+            sigmoid_func_derivative: Callable[[
+                float, ...], float] = fun.sigmoid_exp_derivative,
     ):
         self.learning_rate = learning_rate
-        self.X = np.insert(inputs, 0, 1, axis=1)
+
+        self.sigmoid_func = sigmoid_func
+        self.sigmoid_func_img = sigmoid_func_img
+        self.sigmoid_func_derivative = sigmoid_func_derivative
+        self.beta = beta
+
+        self.inputs = np.insert(inputs, 0, 1, axis=1)
 
         expected_range = (np.min(expected_outputs), np.max(expected_outputs))
-        self.Y = feature_scaling(expected_outputs, expected_range, (0, 1))
+        self.scaled_expected_outputs = feature_scaling(expected_outputs, expected_range, (0, 1))
+        self.expected_outputs = expected_outputs
 
-        self.hidden_nodes = hidden_nodes
-        self.output_nodes = output_nodes
+        self.output_nodes_dimension = output_nodes_dimension
+        self.hidden_nodes_dimensions = hidden_nodes_dimensions
 
-        self.M = self.X.shape[1]
+        self.weights = []
+        row = np.random.rand(len(self.inputs[0]), hidden_nodes_dimensions[0])
+        self.weights.append(row)
 
-        self.weights = [
-            np.random.randn(self.hidden_nodes, self.M),
-            np.random.randn(self.output_nodes, self.hidden_nodes + 1)
-        ]
+        # Generate random numbers for each row
+        for i in range(1, len(hidden_nodes_dimensions)):
+            row = np.random.rand(hidden_nodes_dimensions[i - 1], hidden_nodes_dimensions[i])
+            self.weights.append(row)
+
+        self.weights.append(np.random.rand(hidden_nodes_dimensions[-1], output_nodes_dimension))
+
+        self.M = self.inputs.shape[1]
+
+        self.min_weights = self.weights
 
         self.previous_deltas = [
             np.zeros(self.weights[0].shape), np.zeros(self.weights[1].shape)]
-        print(self.weights)
 
     def activation_func(self, value):
-        return 1 / (1 + np.exp(-value))
+        return self.activation_func(value, self.beta)
 
     def activation_func_derivate(self, value):
-        activation_function = self.activation_func(value)
-        return activation_function * (1 - activation_function)
+        return self.activation_func_derivate(value, self.beta)
 
     def predict(self, X):
         X = np.insert(X, 0, 1, axis=1)
         _, _, _, output = self.forward_propagation(X)
-        return output
+        return output[-1]
 
-    def forward_propagation(self, X):
-        h1 = self.weights[0].dot(X, T)
-        # Hidden layer output
-        V1 = self.activation_func(h1)  # (hidden_nodes, N)
-        # Add bias to hidden layer output
-        V1 = np.insert(V1, 0, 1, axis=0)  # (hidden_nodes + 1, N)
+    def forward_propagation(self, X: [[int]]):
+        Vs = []
+        Vs.append(np.array(X))
 
-        # (output_nodes, hidden_nodes + 1) x (hidden_nodes + 1, N) = (output_nodes, N)
-        h2 = self.weights[1].dot(V1)
-        # Output layer output
-        o = self.activation_func(h2)
-        return h1, V1, h2, o
+        for i in range(len(self.weights)):
+            excitations = np.dot(Vs[i], self.weights[i])
+            output = np.vectorize(
+                self.sigmoid_func)(excitations, self.beta)
+            Vs.append(output)
+        return Vs
 
     def backward_propagation(self, h1, V1, h2, O):
         # Update output layer weights
@@ -84,34 +96,42 @@ class MultiLayerPerceptron(Perceptron):
         self.weights[1] += dW
         self.weights[0] += dw
 
-    def train(self, max_epochs: int):
-        for epoch in range(max_epochs):
-            h1, V1, h2, O = self.feed_forward(self.X)
+    def get_indexes(self):
+        # u = random.randint(0, len(self.data) - 1)
+        u = np.random.randint(0, len(self.inputs), 2)
+        return u
 
-            if self.is_converged(O):
+    def train(self, max_epochs: int = 1000):
+        for epoch in range(max_epochs):
+            u = self.get_indexes()
+            Vs = self.forward_propagation(self.inputs[u])
+            print(Vs[-1])
+            exit()
+            # TODO: finish method
+
+            if self.is_converged(Vs[-1]):
                 break
 
             if epoch % 1000 == 0:
-                print(f"{epoch=} ; output={O} ; error={self.get_error(O)}")
+                print(f"{epoch=} ; output={Vs[-1]} ; error={self.get_error(Vs[-1])}")
 
             self.backward_propagation(h1, V1, h2, O)
-
         return O, epoch, self.is_converged(O)
 
     def get_scaled_outputs(self):
         return
 
-    def compute_error(self):
-        p = self.X.shape[0]
+    def compute_error(self, output, expected_outputs):
+        p = self.inputs.shape[0]
         # (output_nodes, N) - (output_nodes, N) = (output_nodes, N)
-        output_errors = self.Y.T - O
+        output_errors = self.scaled_expected_outputs - output
         return np.power(output_errors, 2).sum() / p
 
     def compute_deltas(self, indexes: [int]):
         return
 
-    def is_converged(self):
+    def is_converged(self, output):
         # amplitude of the expected output values (scaled to logistic function range)
-        expected_outputs_amplitude = 1 - 0
+        expected_outputs_amplitude = 1 - 0 # TODO: fix
         percentage_threshold = 0.0001
-        return self.get_error(O) < percentage_threshold * expected_outputs_amplitude
+        return self.compute_error(output) < percentage_threshold * expected_outputs_amplitude

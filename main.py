@@ -100,7 +100,7 @@ if __name__ == "__main__":
     i = 0.5
 
     non_linear_perceptron = NonLinearPerceptron(
-        data, expected_values, beta=i, learning_rate=10)
+        data, expected_values, beta=i, learning_rate=0.01)
     epochs, converged = non_linear_perceptron.train(10000)
 
     print("\n----- NonLinearPerceptron -----\n")
