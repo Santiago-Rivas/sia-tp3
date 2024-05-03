@@ -3,22 +3,8 @@ from src.perceptron import Perceptron
 from src.utils import feature_scaling
 from typing import Callable
 import time
+import src.functions as fun
 
-
-def sigmoid_tanh(x, beta: float):
-    return np.tanh(beta * x)
-
-
-def sigmoid_tanh_derivative(x, beta: float):
-    return beta * (1 - sigmoid_tanh(x, beta)**2)
-
-
-def sigmoid_exp(x, beta: float):
-    return 1 / (1 + np.exp(-2 * beta * x))
-
-
-def sigmoid_exp_derivative(x, beta: float):
-    return 2 * beta * sigmoid_exp(x, beta) * (1 - sigmoid_exp(x, beta))
 
 class NonLinearPerceptron(Perceptron):
 
@@ -28,10 +14,10 @@ class NonLinearPerceptron(Perceptron):
         expected_value: np.array,
         beta: float = 0.9,
         learning_rate: float = 15,
-        sigmoid_func: Callable[[float, ...], float] = sigmoid_exp,
+        sigmoid_func: Callable[[float, ...], float] = fun.sigmoid_exp,
         sigmoid_func_img: tuple[float, float] = (0, 1),
         sigmoid_func_derivative: Callable[[
-            float, ...], float] = sigmoid_exp_derivative,
+            float, ...], float] = fun.sigmoid_exp_derivative,
     ):
         super().__init__(data, expected_value, learning_rate)
 
