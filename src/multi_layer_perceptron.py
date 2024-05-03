@@ -3,6 +3,12 @@ from src.perceptron import Perceptron
 from src.utils import feature_scaling
 
 
+def feature_scaling(value: float, from_int: tuple[float, float], to_int: tuple[float, float]) -> float:
+    numerator = value - from_int[0]
+    denominator = from_int[1] - from_int[0]
+    return (numerator / denominator) * (to_int[1] - to_int[0]) + to_int[0]
+
+
 class MultiLayerPerceptron(Perceptron):
 
     def __init__(
@@ -75,13 +81,6 @@ class MultiLayerPerceptron(Perceptron):
         # (hidden_nodes, N) x (N, M) =  (hidden_nodes, M)
         dw = self.learning_rate * dV1.dot(self.X)
 
-        if settings.optimization.active and settings.optimization.method == "momentum":
-            aux_dW = dW.copy()
-            aux_dw = dw.copy()
-            dw += settings.optimization.momentum_rate * self.previous_deltas[0]
-            dW += settings.optimization.momentum_rate * self.previous_deltas[1]
-            self.previous_deltas = [aux_dw, aux_dW]
-
         self.weights[1] += dW
         self.weights[0] += dw
 
@@ -92,7 +91,7 @@ class MultiLayerPerceptron(Perceptron):
             if self.is_converged(O):
                 break
 
-            if epoch % 1000 == 0 and settings.verbose:
+            if epoch % 1000 == 0:
                 print(f"{epoch=} ; output={O} ; error={self.get_error(O)}")
 
             self.backward_propagation(h1, V1, h2, O)
@@ -114,5 +113,5 @@ class MultiLayerPerceptron(Perceptron):
     def is_converged(self):
         # amplitude of the expected output values (scaled to logistic function range)
         expected_outputs_amplitude = 1 - 0
-        percentage_threshold = settings.multilayer_perceptron.convergence_threshold / 100
+        percentage_threshold = 0.0001
         return self.get_error(O) < percentage_threshold * expected_outputs_amplitude
