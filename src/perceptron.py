@@ -77,7 +77,7 @@ class Perceptron:
 
     def get_indexes(self):
         # u = random.randint(0, len(self.data) - 1)
-        u = np.random.randint(0, len(self.data) - 1, 1)
+        u = np.random.randint(0, len(self.data), 1)
         return u
 
     def compute_error(self):
