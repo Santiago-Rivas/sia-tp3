@@ -26,9 +26,9 @@ if __name__ == "__main__":
 	inputs = np.array([[-1, 1], [1, -1], [-1, -1], [1, 1]])
 	expected_outputs = np.array([1, 1, -1, -1])
 
-	multilayer_perceptron = MultiLayerPerceptron(0.01, inputs, 2, 1, expected_outputs)
+	multilayer_perceptron = MultiLayerPerceptron(0.1, inputs, 2,10, 1, expected_outputs)
 
-	_, epochs, _ = multilayer_perceptron.train(100000)
+	_, epochs, _ = multilayer_perceptron.train(10000)
 	print("\nStopped training at epoch: ", epochs)
 	print(multilayer_perceptron)
 
@@ -37,9 +37,9 @@ if __name__ == "__main__":
 	inputs, expected_outputs = parse_digits(f"TP3-ej3-digitos.txt")
 
 	is_digit_even = np.vectorize(lambda digit: 1 if digit % 2 == 0 else -1)(expected_outputs)
-	multilayer_perceptron = MultiLayerPerceptron(0.001, inputs, 10, 1, is_digit_even)
+	multilayer_perceptron = MultiLayerPerceptron(0.1, inputs, 10, 1,1, is_digit_even)
 
-	_, epochs, _ = multilayer_perceptron.train(100000)
+	_, epochs, _ = multilayer_perceptron.train(10000)
 	print("\nStopped training at epoch: ", epochs)
 	print(multilayer_perceptron)
 
@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
 	# Same input as the previous experiment
 	# expected_output for 0 is [1 0 0 .... 0], for 1 is [0 1 0 .... 0], for 9 is [0 0 .... 0 1]
-	multilayer_perceptron = MultiLayerPerceptron(0.01, inputs,25, 10, np.identity(10))
+	multilayer_perceptron = MultiLayerPerceptron(1, inputs,10,1, 10, np.identity(10))
 
 	_, epochs, _ = multilayer_perceptron.train(10000)
 

@@ -13,6 +13,7 @@ class MultiLayerPerceptron():
             learning_rate: float,
             inputs: np.array,
             hidden_nodes: int,
+            hidden_layers:int,
             output_nodes: int,
             expected_outputs: np.array
     ):
@@ -23,16 +24,20 @@ class MultiLayerPerceptron():
         self.Y = feature_scaling(expected_outputs, expected_range,(0,1))
 
         self.hidden_nodes = hidden_nodes
+        self.hidden_layers = hidden_layers
         self.output_nodes = output_nodes
 
         self.M = self.X.shape[1]
 
-        self.weights = [
-            np.random.randn(self.hidden_nodes, self.M),
-            np.random.randn(self.output_nodes, self.hidden_nodes + 1)
-        ]
+        # Initialize weights for each layer
+        self.weights = [np.random.randn(self.hidden_nodes, self.M)]  # Input layer to first hidden layer
+        
+        for _ in range(self.hidden_layers - 1):  # For additional hidden layers
+            self.weights.append(np.random.randn(self.hidden_nodes, self.hidden_nodes + 1))  # Additional hidden layers
+        
+        self.weights.append(np.random.randn(self.output_nodes, self.hidden_nodes + 1))  # Last hidden layer to output layer
 
-        self.previous_deltas = [np.zeros(self.weights[0].shape), np.zeros(self.weights[1].shape)]
+        self.previous_deltas = [np.zeros(weight.shape) for weight in self.weights]
 
 
 
@@ -44,49 +49,100 @@ class MultiLayerPerceptron():
         return activation_function * (1 - activation_function)
     
     def predict(self, X):
-        X = np.insert(X,0,1,axis=1)
-        _, _, _, output = self.forward_propagation(X)
-        return output
+        X = np.insert(X,0,1,axis=1)  # Add bias to input
+        activations = [X.T]  # List to store activations of each layer
+
+        # Forward propagate input through each layer
+        for i in range(len(self.weights)):
+            h = self.weights[i].dot(activations[-1])  # Compute weighted sum
+            # Apply activation function (except for output layer)
+            if i < len(self.weights) - 1:
+                activation = self.activation_func(h)
+                activation = np.insert(activation, 0, 1, axis=0)  # Add bias
+            else:
+                activation = self.activation_func(h)  # Output layer
+            activations.append(activation)
+
+        return activations[-1].T  # Return output of the last layer (predictions)
+
     
     def forward_propagation(self, X):
-        h1 = self.weights[0].dot(X.T)
-        # Hidden layer output
-        V1 = self.activation_func(h1)  # (hidden_nodes, N)
-        # Add bias to hidden layer output
-        V1 = np.insert(V1, 0, 1, axis=0) # (hidden_nodes + 1, N)
+        # Initialize lists to store outputs and inputs for each layer
+        h_outputs = []
+        V_inputs = []
 
-        h2 = self.weights[1].dot(V1)# (output_nodes, hidden_nodes + 1) x (hidden_nodes + 1, N) = (output_nodes, N)
-        # Output layer output
-        o = self.activation_func(h2)
-        return h1, V1, h2, o
+        # Compute hidden layer outputs (h) and inputs (V) for each hidden layer
+        for i in range(len(self.weights) - 1):
+            if i == 0:
+                h = self.weights[i].dot(X.T)
+            else:
+                h = self.weights[i].dot(V_inputs[-1])
+            V = self.activation_func(h)
+            V_with_bias = np.insert(V, 0, 1, axis=0)  # Add bias term to the input
+            h_outputs.append(h)
+            V_inputs.append(V_with_bias)
 
-    def backward_propagation(self, h1, V1, h2, O):
+        # Compute output layer outputs (h2) and inputs (O)
+        h2 = self.weights[-1].dot(V_inputs[-1])
+        O = self.activation_func(h2)
+
+        return h_outputs, V_inputs, h2, O
+    
+    def backward_propagation(self, h1_outputs, V1_inputs, h2_output, O_predicted):
         # Update output layer weights
-        output_errors = self.Y.T - O                              # (output_nodes, N) - (output_nodes, N) = (output_nodes, N)
-        dO = output_errors * self.activation_func_derivative(h2)  # (output_nodes, N) * (output_nodes, N) = (output_nodes, N), multiply element by element
-        dW = self.learning_rate * dO.dot(V1.T)                    # (output_nodes, N) x (N, hidden_nodes + 1) = (output_nodes, hidden_nodes + 1)
-        
-        # Update hidden layer weights
-        output_layer_delta_sum = dO.T.dot(self.weights[1][:, 1:])        # (N, output_nodes) x (output_nodes, hidden_nodes) = (N, hidden_nodes) . Don't use the bias term in the calculation
-        dV1 = output_layer_delta_sum.T * self.activation_func_derivative(h1) # (hidden_nodes, N) * (hidden_nodes, N) = (hidden_nodes, N)
-        dw = self.learning_rate * dV1.dot(self.X)                 # (hidden_nodes, N) x (N, M) =  (hidden_nodes, M)
+        output_errors = self.Y.T - O_predicted  # Compute output errors
+        dO = output_errors * self.activation_func_derivative(h2_output)  # Compute derivative of activation function
+        dW_output = self.learning_rate * dO.dot(V1_inputs[-1].T)  # Compute weight gradients for output layer
+        # Update output layer weights
+        self.weights[-1] += dW_output
 
-        self.weights[1] += dW
-        self.weights[0] += dw
+        # Initialize delta for next layer
+        delta_next = dO
+
+        # Backpropagate through hidden layers
+        for i in range(len(self.weights) - 2, -1, -1):
+            # Compute delta for current hidden layer
+            weights_without_bias = self.weights[i + 1][:, 1:]  # Exclude bias weights
+            # print("Shapes:")
+            # print("weights_without_bias:", weights_without_bias.shape)
+            # print("delta_next:", delta_next.shape)
+
+            # Compute delta_current for hidden layer
+            delta_current = weights_without_bias.T.dot(delta_next) * self.activation_func_derivative(h1_outputs[i])
+            # print("delta_current:", delta_current.shape)
+            # print("V1_inputs[i]:", V1_inputs[i].shape)
+
+            # Compute weight gradients for current hidden layer
+            # Compute weight gradients for current hidden layer
+            # Compute weight gradients for current hidden layer
+            dW_hidden = self.learning_rate * delta_current.dot(V1_inputs[i].T)
+            # Pad dW_hidden with zeros to match the shape of self.weights[i]
+            num_cols_diff = self.weights[i].shape[1] - dW_hidden.shape[1]
+            dW_hidden = np.concatenate((dW_hidden, np.zeros((dW_hidden.shape[0], num_cols_diff))), axis=1)
+
+            # print("dW_hidden:", dW_hidden.shape)
+            # print("self.weights[i]:", self.weights[i].shape)
+
+            # Update weights for current hidden layer
+            self.weights[i] += dW_hidden
+
+            # Update delta for next layer
+            delta_next = delta_current
+
 
     def train(self, max_epochs: int):
         for epoch in range(max_epochs):
-            h1, V1, h2, O = self.forward_propagation(self.X)
+            h1_outputs, V1_inputs, h2_output, O_predicted = self.forward_propagation(self.X)
 
-            if self.is_converged(O):
+            if self.is_converged(O_predicted):
                 break
 
-            if epoch % 1000 == 0:
-                print(f"{epoch=} ; output={O} ; error={self.compute_error(O)}")
+            # if epoch % 1000 == 0:
+                # print(f"{epoch=} ; output={O_predicted} ; error={self.compute_error(O_predicted)}")
 
-            self.backward_propagation(h1, V1, h2, O)
+            self.backward_propagation(h1_outputs, V1_inputs, h2_output, O_predicted)
 
-        return O, epoch, self.is_converged(O)
+        return O_predicted, epoch, self.is_converged(O_predicted)
 
     def get_scaled_outputs(self):
         return
@@ -101,7 +157,7 @@ class MultiLayerPerceptron():
     
     def is_converged(self, O):
         expected_outputs_amplitude = 1 - 0  # amplitude of the expected output values (scaled to logistic function range)
-        percentage_threshold = 0.01
+        percentage_threshold = 0.1
         return self.compute_error(O) < percentage_threshold * expected_outputs_amplitude
 
     def __str__(self) -> str:
