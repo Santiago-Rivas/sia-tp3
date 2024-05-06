@@ -133,7 +133,7 @@ class MultiLayerPerceptron():
 
         return h_outputs, V_inputs, h2, O
 
-    def backward_propagation(self, h1_outputs, V1_inputs, h2_output, O_predicted):
+    def backward_propagation_adam(self, h1_outputs, V1_inputs, h2_output, O_predicted):
         output_errors = self.Y.T - O_predicted  # Compute output errors
         dO = output_errors * self.activation_func_derivative(h2_output)
         dW_output = self.learning_rate * dO.dot(V1_inputs[-1].T)
@@ -168,7 +168,7 @@ class MultiLayerPerceptron():
             self.weights[i] += self.learning_rate * \
                 m_hat / (np.sqrt(v_hat) + self.epsilon)
 
-    def train(self, max_epochs: int):
+    def train_adam(self, max_epochs: int):
         errors = []
         for epoch in range(max_epochs):
             input = self.training_strategy(self.X)
@@ -184,7 +184,7 @@ class MultiLayerPerceptron():
             error = self.compute_error(O_predicted)
             errors.append(error)
 
-            self.backward_propagation(
+            self.backward_propagation_adam(
                 h1_outputs, V1_inputs, h2_output, O_predicted)
 
         # plt.plot(range(1, len(errors) + 1), errors)
@@ -193,6 +193,62 @@ class MultiLayerPerceptron():
         # plt.title('Error vs. Epoch')
         # if (self.is_converged(O_predicted)):
             # plt.show()
+        return O_predicted, epoch, self.is_converged(O_predicted)
+
+    def backward_propagation(self, h1_outputs, V1_inputs, h2_output, O_predicted):
+        # Update output layer weights
+        output_errors = self.Y.T - O_predicted  # Compute output errors
+        dO = output_errors * self.activation_func_derivative(h2_output)  # Compute derivative of activation function
+        dW_output = self.learning_rate * dO.dot(V1_inputs[-1].T)  # Compute weight gradients for output layer
+        # Update output layer weights
+        self.weights[-1] += dW_output
+
+        # Initialize delta for next layer
+        delta_next = dO
+
+        # Backpropagate through hidden layers
+        for i in range(len(self.weights) - 2, -1, -1):
+            # Compute delta for current hidden layer
+            weights_without_bias = self.weights[i + 1][:, 1:]  # Exclude bias weights
+            # print("Shapes:")
+            # print("weights_without_bias:", weights_without_bias.shape)
+            # print("delta_next:", delta_next.shape)
+
+            # Compute delta_current for hidden layer
+            delta_current = weights_without_bias.T.dot(delta_next) * self.activation_func_derivative(h1_outputs[i])
+            # print("delta_current:", delta_current.shape)
+            # print("V1_inputs[i]:", V1_inputs[i].shape)
+
+            # Compute weight gradients for current hidden layer
+            # Compute weight gradients for current hidden layer
+            # Compute weight gradients for current hidden layer
+            dW_hidden = self.learning_rate * delta_current.dot(V1_inputs[i].T)
+            # Pad dW_hidden with zeros to match the shape of self.weights[i]
+            num_cols_diff = self.weights[i].shape[1] - dW_hidden.shape[1]
+            dW_hidden = np.concatenate((dW_hidden, np.zeros((dW_hidden.shape[0], num_cols_diff))), axis=1)
+
+            # print("dW_hidden:", dW_hidden.shape)
+            # print("self.weights[i]:", self.weights[i].shape)
+
+            # Update weights for current hidden layer
+            self.weights[i] += dW_hidden
+
+            # Update delta for next layer
+            delta_next = delta_current
+
+
+    def train(self, max_epochs: int):
+        for epoch in range(max_epochs):
+            h1_outputs, V1_inputs, h2_output, O_predicted = self.forward_propagation(self.X)
+
+            if self.is_converged(O_predicted):
+                break
+
+            # if epoch % 1000 == 0:
+                # print(f"{epoch=} ; output={O_predicted} ; error={self.compute_error(O_predicted)}")
+
+            self.backward_propagation(h1_outputs, V1_inputs, h2_output, O_predicted)
+
         return O_predicted, epoch, self.is_converged(O_predicted)
 
     def get_scaled_outputs(self):
