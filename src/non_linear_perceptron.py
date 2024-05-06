@@ -20,6 +20,7 @@ def sigmoid_exp(x, beta: float):
 def sigmoid_exp_derivative(x, beta: float):
     return 2 * beta * sigmoid_exp(x, beta) * (1 - sigmoid_exp(x, beta))
 
+
 class NonLinearPerceptron(Perceptron):
 
     def __init__(
@@ -32,6 +33,7 @@ class NonLinearPerceptron(Perceptron):
         sigmoid_func_img: tuple[float, float] = (0, 1),
         sigmoid_func_derivative: Callable[[
             float, ...], float] = sigmoid_exp_derivative,
+        percentage_threshold=0.0001
     ):
         super().__init__(data, expected_value, learning_rate)
 
@@ -43,6 +45,8 @@ class NonLinearPerceptron(Perceptron):
         self.scaled_expected_values = feature_scaling(
             self.expected_value, self.expected_range, self.sigmoid_func_img)
         self.beta = beta
+        self.percentage_threshold = percentage_threshold
+        self.data_len = len(self.weights)
 
     def activation_func(self, value):
         # time.sleep(0.1)
@@ -52,6 +56,12 @@ class NonLinearPerceptron(Perceptron):
 
     def get_scaled_outputs(self):
         outputs = self.get_outputs()
+        scaled_outputs = [feature_scaling(
+            o, self.sigmoid_func_img, self.expected_range) for o in outputs]
+        return np.array(scaled_outputs)
+
+    def get_scaled_outputs_range(self, indexes):
+        outputs = self.get_range_outputs(indexes)
         scaled_outputs = [feature_scaling(
             o, self.sigmoid_func_img, self.expected_range) for o in outputs]
         return np.array(scaled_outputs)
@@ -69,6 +79,7 @@ class NonLinearPerceptron(Perceptron):
         derivatives = np.vectorize(
             self.sigmoid_func_derivative)(excitations, self.beta)
 
+        deltas = np.zeros(self.data_len)
         deltas = self.learning_rate * \
             (output_errors * derivatives).reshape(-1, 1) * self.data[indexes]
 
@@ -77,8 +88,7 @@ class NonLinearPerceptron(Perceptron):
     def is_converged(self):
         expected_values_amplitude = np.max(
             self.scaled_expected_values) - np.min(self.scaled_expected_values)
-        percentage_threshold = 0.0005
-        return self.compute_error() < percentage_threshold
+        return self.compute_error() < self.percentage_threshold * expected_values_amplitude
 
     def __str__(self) -> str:
         output = "Expected - Actual\n"
