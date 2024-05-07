@@ -8,6 +8,12 @@ import time
 
 x_tuple = (float, float, float)
 float_array = [float, float, float]
+def online_training_method(length: int) -> [int]:
+    return np.random.randint(0, length, 1)
+
+
+def batch_training_method(length: int) -> [int]:
+    return range(length)
 
 
 class Perceptron:
@@ -15,7 +21,8 @@ class Perceptron:
         self,
         data: np.array,
         expected_value: np.array,
-        learning_rate: float = 0.000001
+        learning_rate: float = 0.000001,
+        training_method=online_training_method
     ):
         self.learning_rate = learning_rate
         self.min_error = sys.maxsize
@@ -24,6 +31,8 @@ class Perceptron:
             low=-1, high=1, size=self.data.shape[1])
         self.min_weights = self.weights
         self.expected_value = expected_value
+        self.data_len = len(self.data)
+        self.training_method = training_method
 
     def projection(self, x: x_tuple) -> float:
         return x[0] * self.weights[0] + \
@@ -68,7 +77,6 @@ class Perceptron:
             output += f"{expected:<10} {actual}\n"
 
         output += f"\nWeights: {self.weights}"
-
         return output
 
     def get_outputs(self):
@@ -80,8 +88,7 @@ class Perceptron:
         return np.vectorize(self.activation_func)(excitations)
 
     def get_indexes(self):
-        u = np.random.randint(0, len(self.data), 1)
-        return u
+        return self.training_method(self.data_len)
 
     def compute_error(self):
         raise NotImplementedError

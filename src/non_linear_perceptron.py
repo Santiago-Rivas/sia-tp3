@@ -1,6 +1,5 @@
 import numpy as np
-from src.perceptron import Perceptron
-from src.utils import feature_scaling
+from src.perceptron import Perceptron, online_training_method, batch_training_method from src.utils import feature_scaling
 from typing import Callable
 import time
 
@@ -33,9 +32,10 @@ class NonLinearPerceptron(Perceptron):
         sigmoid_func_img: tuple[float, float] = (0, 1),
         sigmoid_func_derivative: Callable[[
             float, ...], float] = sigmoid_exp_derivative,
-        percentage_threshold=0.0001
+        percentage_threshold=0.0001,
+        training_method=online_training_method
     ):
-        super().__init__(data, expected_value, learning_rate)
+        super().__init__(data, expected_value, learning_rate, training_method)
 
         self.expected_range = (np.min(self.expected_value),
                                np.max(self.expected_value))

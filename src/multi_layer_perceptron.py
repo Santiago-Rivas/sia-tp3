@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 plt.rcParams['figure.dpi'] = 300
 
-batch_size = 9
+batch_size = 3
 
 
 def batch(X):
@@ -50,8 +50,8 @@ class MultiLayerPerceptron():
         self.learning_rate = learning_rate
         self.X = np.insert(inputs, 0, 1, axis=1)
 
-        expected_range = (np.min(expected_outputs), np.max(expected_outputs))
-        self.Y = feature_scaling(expected_outputs, expected_range, (0, 1))
+        self.expected_range = (np.min(expected_outputs), np.max(expected_outputs))
+        self.Y = feature_scaling(expected_outputs, self.expected_range, (0, 1))
 
         self.hidden_nodes = hidden_nodes
         self.hidden_layers = hidden_layers
@@ -179,7 +179,7 @@ class MultiLayerPerceptron():
                 break
 
             if epoch % 1000 == 0:
-                print(f"{epoch=} ; output={feature_scaling(O_predicted, (0, 1), (-1, 1)) } ; error={ self.compute_error(O_predicted)}")
+                print(f"{epoch=} ; output={feature_scaling(O_predicted, (0, 1), self.expected_range) } ; error={ self.compute_error(O_predicted)}")
 
             error = self.compute_error(O_predicted)
             errors.append(error)
@@ -192,12 +192,14 @@ class MultiLayerPerceptron():
         # plt.ylabel('Error')
         # plt.title('Error vs. Epoch')
         # if (self.is_converged(O_predicted)):
-            # plt.show()
+        #     plt.show()
+
+        print(f"{epoch=} ; output={feature_scaling(O_predicted, (0, 1), self.expected_range) } ; error={ self.compute_error(O_predicted)}")
         return O_predicted, epoch, self.is_converged(O_predicted)
 
     def backward_propagation(self, h1_outputs, V1_inputs, h2_output, O_predicted):
         # Update output layer weights
-        output_errors = self.Y.T - O_predicted  # Compute output errors
+        output_errors = self.Y.T[0] - O_predicted  # Compute output errors
         dO = output_errors * self.activation_func_derivative(h2_output)  # Compute derivative of activation function
         dW_output = self.learning_rate * dO.dot(V1_inputs[-1].T)  # Compute weight gradients for output layer
         # Update output layer weights
@@ -239,13 +241,15 @@ class MultiLayerPerceptron():
 
     def train(self, max_epochs: int):
         for epoch in range(max_epochs):
-            h1_outputs, V1_inputs, h2_output, O_predicted = self.forward_propagation(self.X)
+            input = self.training_strategy(self.X)
+            h1_outputs, V1_inputs, h2_output, O_predicted = self.forward_propagation(input)
 
             if self.is_converged(O_predicted):
                 break
 
-            # if epoch % 1000 == 0:
+            if epoch % 1000 == 0:
                 # print(f"{epoch=} ; output={O_predicted} ; error={self.compute_error(O_predicted)}")
+                print(f"{epoch=} ; output={feature_scaling(O_predicted, (0, 1), self.expected_range) } ; error={ self.compute_error(O_predicted)}")
 
             self.backward_propagation(h1_outputs, V1_inputs, h2_output, O_predicted)
 
@@ -266,7 +270,7 @@ class MultiLayerPerceptron():
     def is_converged(self, O):
         # amplitude of the expected output values (scaled to logistic function range)
         expected_outputs_amplitude = 1 - 0
-        percentage_threshold = 0.001
+        percentage_threshold = 0.00001
         return self.compute_error(O) < percentage_threshold * expected_outputs_amplitude
 
     def __str__(self) -> str:
