@@ -3,7 +3,7 @@ from src.multi_layer_perceptron import MultiLayerPerceptron
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-
+import seaborn as sns
 def parse_digits(path: str):
     with open(path, 'r') as f:
         data = f.read().splitlines()  # read the file and split into lines
@@ -22,6 +22,13 @@ def parse_digits(path: str):
 
     return np.array(digit_images, dtype=float), digits
 
+def visualize_digit(digit: np.array):
+    sns.heatmap(digit.reshape(7, 5), cmap='Greys', vmin=0, vmax=1)
+
+# Mostrar el heatmap
+    plt.show()
+
+
 if __name__ == "__main__":
     num_runs = 3
 
@@ -30,7 +37,7 @@ if __name__ == "__main__":
     all_errors = []
 
     print("\n----- EVEN OR ODD DIGITS -----\n")
-    inputs, expected_outputs = parse_digits(f"TP3-ej3-digitos.txt")
+    inputs, expected_outputs = parse_digits(f"digits.txt")
 
     is_digit_even = np.vectorize(lambda digit: 1 if digit % 2 == 0 else -1)(expected_outputs)
 
@@ -67,4 +74,30 @@ if __name__ == "__main__":
     plt.ylabel('Epochs')
     plt.title('Epochs vs. Run')
     plt.grid(True)
+    plt.show()
+    outputs = []
+    predict_number = []
+
+    inputs2, _ = parse_digits(f"8_with_noice.txt")
+    visualize_digit(inputs2[0])
+    for _ in range(10):
+        multilayer_perceptron = MultiLayerPerceptron(0.01, inputs, 35, 3, 10, np.identity(10))
+        _, epochs, _ = multilayer_perceptron.train_adam(100000)
+        output = multilayer_perceptron.predict(np.array([inputs2[0]]))
+        outputs.append(output)
+        predict_number.append(np.argmax(output))
+    print("los RTRA son")
+    print(predict_number)
+    promedio = np.mean(outputs, axis=0)
+    promedio = np.squeeze(promedio)
+# Crear el gráfico
+    valX = np.arange(10)
+    plt.plot(valX,promedio,marker='o',linestyle='-')
+
+# Añadir etiquetas y título
+    plt.xlabel('Numero')
+    plt.ylabel('Valor promedio')
+    plt.title('Promedio de salidas del perceptrón multicapa')
+
+# Mostrar el gráfico
     plt.show()
